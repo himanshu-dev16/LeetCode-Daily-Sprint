@@ -1,0 +1,16 @@
+class Solution:
+    def maximizeConfusion(self, answerKey: str, k: int) -> int:
+        count = {'T': 0, 'F': 0}
+        left = max_len = max_freq = 0
+        
+        for right in range(len(answerKey)):
+            count[answerKey[right]] += 1
+            max_freq = max(max_freq, count[answerKey[right]])
+            
+            while (right - left + 1) - max_freq > k:
+                count[answerKey[left]] -= 1
+                left += 1
+                
+            max_len = max(max_len, right - left + 1)
+            
+        return max_len

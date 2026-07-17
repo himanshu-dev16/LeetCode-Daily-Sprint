@@ -1,0 +1,12 @@
+class Solution:
+    def minimumCardPickup(self, cards: list[int]) -> int:
+        last_seen = {}
+        min_ans = float('inf')
+        
+        for i, card in enumerate(cards):
+            if card in last_seen:
+                min_ans = min(min_ans, i - last_seen[card] + 1)
+                
+            last_seen[card] = i
+            
+        return min_ans if min_ans != float('inf') else -1

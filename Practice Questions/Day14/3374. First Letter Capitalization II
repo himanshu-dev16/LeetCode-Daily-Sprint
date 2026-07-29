@@ -1,9 +1,59 @@
-# Write your MySQL query statement below
+WITH RECURSIVE Words AS (
+    SELECT
+        content_id,
+        content_text,
+        SUBSTRING_INDEX(content_text, ' ', 1) AS word,
+        SUBSTRING(
+            content_text,
+            LENGTH(SUBSTRING_INDEX(content_text, ' ', 1)) + 2
+        ) AS remaining_text,
+        1 AS token_index
+    FROM user_content
+
+    UNION ALL
+
+    SELECT
+        content_id,
+        content_text,
+        SUBSTRING_INDEX(remaining_text, ' ', 1) AS word,
+        SUBSTRING(
+            remaining_text,
+            LENGTH(SUBSTRING_INDEX(remaining_text, ' ', 1)) + 2
+        ) AS remaining_text,
+        token_index + 1
+    FROM Words
+    WHERE remaining_text <> ''
+),
+
+Converted AS (
+    SELECT
+        content_id,
+        GROUP_CONCAT(
+            IF(
+                word LIKE '%-%',
+                CONCAT(
+                    UPPER(LEFT(SUBSTRING_INDEX(word, '-', 1), 1)),
+                    LOWER(SUBSTRING(SUBSTRING_INDEX(word, '-', 1), 2)),
+                    '-',
+                    UPPER(LEFT(SUBSTRING_INDEX(word, '-', -1), 1)),
+                    LOWER(SUBSTRING(SUBSTRING_INDEX(word, '-', -1), 2))
+                ),
+                CONCAT(
+                    UPPER(LEFT(word, 1)),
+                    LOWER(SUBSTRING(word, 2))
+                )
+            )
+            ORDER BY token_index
+            SEPARATOR ' '
+        ) AS converted_text
+    FROM Words
+    GROUP BY content_id
+)
+
 SELECT
-    user_id,
-    CONCAT(
-        UPPER(LEFT(name, 1)),
-        LOWER(SUBSTRING(name, 2))
-    ) AS name
-FROM Users
-ORDER BY user_id;
+    u.content_id,
+    u.content_text AS original_text,
+    c.converted_text
+FROM user_content u
+JOIN Converted c
+ON u.content_id = c.content_id;

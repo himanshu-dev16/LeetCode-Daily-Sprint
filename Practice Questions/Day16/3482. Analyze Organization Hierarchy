@@ -1,0 +1,63 @@
+# Write your MySQL query statement below
+WITH RECURSIVE
+levels AS (
+    SELECT
+        employee_id,
+        employee_name,
+        manager_id,
+        salary,
+        1 AS level
+    FROM Employees
+    WHERE manager_id IS NULL
+
+    UNION ALL
+
+    SELECT
+        e.employee_id,
+        e.employee_name,
+        e.manager_id,
+        e.salary,
+        l.level + 1
+    FROM Employees e
+    JOIN levels l
+      ON e.manager_id = l.employee_id
+),
+hierarchy AS (
+    SELECT
+        employee_id AS ancestor,
+        employee_id AS descendant
+    FROM Employees
+
+    UNION ALL
+
+    SELECT
+        h.ancestor,
+        e.employee_id
+    FROM hierarchy h
+    JOIN Employees e
+      ON e.manager_id = h.descendant
+),
+team_stats AS (
+    SELECT
+        ancestor AS employee_id,
+        COUNT(*) - 1 AS team_size,
+        SUM(e.salary) - MAX(CASE WHEN ancestor = e.employee_id THEN e.salary END) AS budget
+    FROM hierarchy h
+    JOIN Employees e
+      ON h.descendant = e.employee_id
+    GROUP BY ancestor
+)
+
+SELECT
+    l.employee_id,
+    l.employee_name,
+    l.level,
+    COALESCE(t.team_size, 0) AS team_size,
+    l.salary + COALESCE(t.budget, 0) AS budget
+FROM levels l
+LEFT JOIN team_stats t
+ON l.employee_id = t.employee_id
+ORDER BY
+    l.level,
+    budget DESC,
+    l.employee_name;

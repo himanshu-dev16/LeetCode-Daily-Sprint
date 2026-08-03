@@ -1,0 +1,26 @@
+# Write your MySQL query statement below
+WITH user_category AS (
+    SELECT DISTINCT
+        pp.user_id,
+        pi.category
+    FROM ProductPurchases pp
+    JOIN ProductInfo pi
+        ON pp.product_id = pi.product_id
+)
+
+SELECT
+    a.category AS category1,
+    b.category AS category2,
+    COUNT(DISTINCT a.user_id) AS customer_count
+FROM user_category a
+JOIN user_category b
+    ON a.user_id = b.user_id
+   AND a.category < b.category
+GROUP BY
+    category1,
+    category2
+HAVING COUNT(DISTINCT a.user_id) >= 3
+ORDER BY
+    customer_count DESC,
+    category1,
+    category2;

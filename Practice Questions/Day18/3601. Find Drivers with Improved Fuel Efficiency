@@ -1,0 +1,26 @@
+WITH efficiency AS (
+    SELECT
+        driver_id,
+        CASE
+            WHEN MONTH(trip_date) <= 6 THEN 1
+            ELSE 2
+        END AS half,
+        AVG(distance_km / fuel_consumed) AS avg_efficiency
+    FROM trips
+    GROUP BY driver_id, half
+)
+SELECT
+    d.driver_id,
+    d.driver_name,
+    ROUND(f.avg_efficiency, 2) AS first_half_avg,
+    ROUND(s.avg_efficiency, 2) AS second_half_avg,
+    ROUND(s.avg_efficiency - f.avg_efficiency, 2) AS efficiency_improvement
+FROM efficiency f
+JOIN efficiency s
+    ON f.driver_id = s.driver_id
+   AND f.half = 1
+   AND s.half = 2
+JOIN drivers d
+    ON d.driver_id = f.driver_id
+WHERE s.avg_efficiency > f.avg_efficiency
+ORDER BY efficiency_improvement DESC, d.driver_name ASC;

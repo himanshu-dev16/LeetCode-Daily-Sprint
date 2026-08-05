@@ -1,0 +1,43 @@
+WITH ranked AS (
+    SELECT
+        store_id,
+        product_name,
+        quantity,
+        price,
+        ROW_NUMBER() OVER (
+            PARTITION BY store_id
+            ORDER BY price DESC, product_name
+        ) AS rn_high,
+        ROW_NUMBER() OVER (
+            PARTITION BY store_id
+            ORDER BY price ASC, product_name
+        ) AS rn_low,
+        COUNT(*) OVER (PARTITION BY store_id) AS product_count
+    FROM inventory
+),
+store_info AS (
+    SELECT
+        store_id,
+        MAX(CASE WHEN rn_high = 1 THEN product_name END) AS most_exp_product,
+        MAX(CASE WHEN rn_high = 1 THEN quantity END) AS most_exp_qty,
+        MAX(CASE WHEN rn_low = 1 THEN product_name END) AS cheapest_product,
+        MAX(CASE WHEN rn_low = 1 THEN quantity END) AS cheapest_qty,
+        MAX(product_count) AS product_count
+    FROM ranked
+    GROUP BY store_id
+)
+
+SELECT
+    s.store_id,
+    s.store_name,
+    s.location,
+    si.most_exp_product,
+    si.cheapest_product,
+    ROUND(si.cheapest_qty / si.most_exp_qty, 2) AS imbalance_ratio
+FROM stores s
+JOIN store_info si
+    ON s.store_id = si.store_id
+WHERE si.product_count >= 3
+  AND si.most_exp_qty < si.cheapest_qty
+ORDER BY imbalance_ratio DESC,
+         s.store_name ASC;
